@@ -1,0 +1,12 @@
+{
+    "java.project.referencedLibraries": [
+        "lib\\Java3D\\1.5.1\\lib\\ext\\j3dcore.jar",
+        "lib\\simbad-1.7.jar",
+        "lib\\Java3D\\1.5.1\\lib\\ext\\j3dutils.jar",
+        "lib\\Java3D\\1.5.1\\lib\\ext\\vecmath.jar"
+    ],
+    "java.project.sourcePaths": [
+        "src"
+    ],
+    "java.project.outputPath": "build\\classes",
+}
