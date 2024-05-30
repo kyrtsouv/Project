@@ -14,13 +14,13 @@ public class MyRobot extends Agent {
     }
 
     private double luxLimit = 0.07304601838134014;
-    private double angleLimit = 0.00001;
+    private double angleLimit = 0.00003;
 
     private LightSensor ll, lf, lr;
     private RangeSensorBelt sonars;
     private State state;
 
-    private double iL, iH;
+    // private double iL, iH;
     private double ik, ik_1, ik_2;
 
     public MyRobot(Vector3d position, String name) {
@@ -33,7 +33,7 @@ public class MyRobot extends Agent {
     }
 
     public void initBehavior() {
-        iL = lf.getLux();
+        // iL = lf.getLux();
         state = State.ORIENTATE;
     }
 
@@ -66,7 +66,10 @@ public class MyRobot extends Agent {
         }
         if (sonars.getFrontQuadrantHits() > 0) {
             this.setTranslationalVelocity(0);
-            iH = lf.getLux();
+            // iH = lf.getLux();
+            ik = 1;
+            ik_1 = 1.1;
+            ik_2 = 1.2;
             state = State.FOLLOW;
             return;
         }
@@ -81,11 +84,11 @@ public class MyRobot extends Agent {
     private void orientate() {
         System.out.println("Orientate");
         if (Math.abs(lr.getLux() - ll.getLux()) < angleLimit) {
-            state = State.FORWARD;
+            this.setRotationalVelocity(0);
             ik = 0;
             ik_1 = -0.1;
             ik_2 = -0.2;
-            this.setRotationalVelocity(0);
+            state = State.FORWARD;
             return;
         }
         this.setRotationalVelocity((lr.getLux() - ll.getLux()) * 1000);
@@ -93,13 +96,16 @@ public class MyRobot extends Agent {
 
     private void follow() {
         System.out.println("Follow");
-        circumNavigate(this, sonars, true);
-        // if (lf.getLux() < iH) {
-        // this.setTranslationalVelocity(0);
-        // this.setRotationalVelocity(0);
-        // iL = lf.getLux();
-        // state = State.ORIENTATE;
-        // }
+        circumNavigate();
+        ik_2 = ik_1;
+        ik_1 = ik;
+        ik = lf.getLux();
+        if (ik_2 < ik_1 && ik_1 > ik) {
+            this.setTranslationalVelocity(0);
+            this.setRotationalVelocity(0);
+            state = State.ORIENTATE;
+            return;
+        }
     }
 
     double K1 = 5;
@@ -107,37 +113,37 @@ public class MyRobot extends Agent {
     double K3 = 1;
     double SAFETY = 0.8;
 
-    public void circumNavigate(Agent rob, RangeSensorBelt sonars, boolean CLOCKWISE) {
+    private void circumNavigate() {
         int min = 0;
         for (int i = 1; i < sonars.getNumSensors(); i++)
             if (sonars.getMeasurement(i) < sonars.getMeasurement(min))
                 min = i;
-        Point3d p = this.getSensedPoint(rob, sonars, min);
-        double d = p.distance(new Point3d(0, 0, 0));
-        Vector3d v;
-        v = CLOCKWISE ? new Vector3d(-p.z, 0, p.x) : new Vector3d(p.z, 0, -p.x);
-        double phLin = Math.atan2(v.z, v.x);
-        double phRot = Math.atan(K3 * (d - SAFETY));
-        if (CLOCKWISE)
-            phRot = -phRot;
-        double phRef = wrapToPi(phLin + phRot);
+        Point3d closestPoint = getSensedPoint(min);
+        double distance = closestPoint.distance(new Point3d(0, 0, 0));
 
-        rob.setRotationalVelocity(K1 * phRef);
-        rob.setTranslationalVelocity(K2 * Math.cos(phRef));
+        Vector3d navigationVector = new Vector3d(closestPoint.z, 0, -closestPoint.x);
+
+        double linearAngle = Math.atan2(navigationVector.z, navigationVector.x);
+        double rotationAngle = K3 * (distance - SAFETY);
+
+        double desiredAngle = wrapToPi(linearAngle + rotationAngle);
+
+        setRotationalVelocity(K1 * desiredAngle);
+        setTranslationalVelocity(K2 * Math.cos(desiredAngle));
     }
 
-    public Point3d getSensedPoint(Agent rob, RangeSensorBelt sonars, int sonar) {
+    private Point3d getSensedPoint(int sonar) {
         double v;
         if (sonars.hasHit(sonar))
-            v = rob.getRadius() + sonars.getMeasurement(sonar);
+            v = getRadius() + sonars.getMeasurement(sonar);
         else
-            v = rob.getRadius() + sonars.getMaxRange();
+            v = getRadius() + sonars.getMaxRange();
         double x = v * Math.cos(sonars.getSensorAngle(sonar));
         double z = v * Math.sin(sonars.getSensorAngle(sonar));
         return new Point3d(x, 0, z);
     }
 
-    public double wrapToPi(double a) {
+    private double wrapToPi(double a) {
         if (a > Math.PI)
             return a - Math.PI * 2;
         if (a <= -Math.PI)

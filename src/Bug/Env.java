@@ -15,5 +15,7 @@ public class Env extends EnvironmentDescription {
         Wall w1 = new Wall(new Vector3d(1, 0, 0), 4, 1, this);
         w1.rotate90(1);
         add(w1);
+        Wall w2 = new Wall(new Vector3d(1, 0, 1), 4, 1, this);
+        add(w2);
     }
 }
